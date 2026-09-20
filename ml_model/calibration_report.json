@@ -1,0 +1,23 @@
+{
+  "method_chosen": "platt",
+  "calibration_fit_n": 171,
+  "calibration_eval_n": 74,
+  "calibration_fit_date_range": [
+    "2025-03-13",
+    "2025-04-04"
+  ],
+  "calibration_eval_date_range": [
+    "2025-04-04",
+    "2025-04-13"
+  ],
+  "platt": {
+    "brier": 0.20604604494363493,
+    "log_loss": 0.5955628534700548,
+    "coef": 0.12418790965804782,
+    "intercept": -0.08099672095414892
+  },
+  "isotonic": {
+    "brier": 0.20937972919228529,
+    "log_loss": 0.5866376956539988
+  }
+}

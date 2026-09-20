@@ -1,0 +1,12 @@
+nba_api
+pandas
+sqlalchemy
+psycopg2-binary
+streamlit
+plotly
+fastapi
+uvicorn
+numpy
+scikit-learn
+xgboost
+joblib

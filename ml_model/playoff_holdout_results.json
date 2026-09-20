@@ -1,0 +1,9 @@
+{
+  "n_games": 84,
+  "baseline_accuracy": 0.5833333333333334,
+  "baseline_correct": 49,
+  "hybrid_accuracy": 0.5476190476190476,
+  "hybrid_correct": 46,
+  "baseline_brier": 0.23385431714285715,
+  "hybrid_brier": 0.23328778952380952
+}

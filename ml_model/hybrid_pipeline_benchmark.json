@@ -1,0 +1,68 @@
+{
+  "description": "The FULL hybrid pipeline's (calibrated Monte Carlo engine + ML-predicted margin bias via --ml-margin + Hot Hand boost for high-leverage matchups) real win/loss accuracy on a chronological holdout, measured against the pure Monte Carlo baseline with no ML involved -- by `backtest_model.py --mode hybrid` (equivalently `--mode both`), NOT by train_ml_model.py's own holdout evaluation. This is a DIFFERENT, broader metric than ml_model/holdout_predictions.json's `eval_report.directional_accuracy`: that number only checks whether the ML model's predicted margin SIGN matches the actual game's margin sign (no engine involved at all); this number is the actual simulated game's predicted winner vs. the real winner, after the Monte Carlo engine has also had a chance to add or subtract value on top of the ML signal.",
+  "configuration": "SWAP-ANTISYMMETRIC BASELINE -- see antisymmetry_fix_methodology below. Builds on the prior clean, statistically-justified baseline (no arbitrary training-time weight multiplier; Platt-calibrated win probabilities) by additionally removing big_match_indicator as a raw model input, since it is symmetric under a team_a/team_b swap (min() doesn't care about order) and therefore broke predict_margin(A,B) == -predict_margin(B,A) -- the property a live /api/simulate-ml call relies on when a user swaps which team is A vs B. It remains a diagnostic-only column and the multiplier inside the already-antisymmetric star_usage_concentration interaction feature; it is simply no longer fed to XGBoost as an independent input (see train_ml_model.py's MODEL_FEATURE_NAMES).",
+  "source_log": "backtest_both_antisymmetry_fix.log",
+  "source_command": "backtest_model.py --csv historical_games.csv (chronological holdout, --mode both default; train_ml_model.py's DEFAULT_HIGH_LEVERAGE_WEIGHT_MULTIPLIER=1.0 -- uniform, no weighting; --hot-hand-boost 1.05 applied to flagged high-leverage matchups only; 9 model features, big_match_indicator excluded per MODEL_FEATURE_NAMES)",
+  "measured_at": "2026-09-19T22:30:00",
+  "antisymmetry_fix_methodology": {
+    "bug_found": "build_feature_vector()'s big_match_indicator = min(team_a.net_rating_proxy, team_b.net_rating_proxy) is unchanged by a team_a/team_b swap, unlike every other one of the model's other 9 features (which all correctly negate under a swap, matching actual_margin's own sign flip). Feeding it to XGBoost as a raw predictor (it carried ~7.75-8.6% gain-based importance across prior training runs) meant predict_margin(A,B) was not reliably equal to -predict_margin(B,A) -- a real, provable break in the swap symmetry a live matchup request depends on.",
+    "fix_applied": "big_match_indicator is still computed every row (kept as the feat_big_match_indicator diagnostic column used by analyze_high_leverage_variance(), and as the multiplier inside star_usage_concentration, which -- as an antisymmetric term times a symmetric one -- is itself correctly antisymmetric and remains a real model input) but is excluded from MODEL_FEATURE_NAMES, the actual 9-feature set now fed to the model at both training and inference time.",
+    "accuracy_impact": "Regular-season hybrid accuracy dropped from 68.2% (167/245) to 66.5% (163/245); baseline (no ML at all) is unchanged at 64.9%, confirming the drop is entirely in the ML layer's contribution, not the engine. Playoff-holdout hybrid accuracy dropped further, from 57.1% (48/84) to 54.8% (46/84) -- now below that same baseline's 58.3%. historical_games.csv has team_a as ALWAYS the home team (see calibrated_constants.h's own calibration note), so a symmetric feature like big_match_indicator could pick up incidental correlation with that fixed labeling structure on this specific dataset without representing a real, swap-invariant team-quality effect -- which would not hold up in a live API call where the user's Team A is not necessarily home. The lower number here is treated as the honest, correct measurement: swap-symmetry correctness was prioritized over chasing the higher pre-fix figure."
+  },
+  "regular_season_holdout": {
+    "description": "Standard chronological holdout, unchanged in size/composition from every prior benchmark measurement -- the most recent 245 of the 1225 real 2024-25 regular-season games in historical_games.csv (2025-03-13 to 2025-04-13), never seen during training.",
+    "n_games": 245,
+    "baseline_accuracy": 0.649,
+    "baseline_correct": 159,
+    "hybrid_accuracy": 0.665,
+    "hybrid_correct": 163,
+    "accuracy_delta": 0.016,
+    "ml_only_holdout_directional_accuracy": 0.665
+  },
+  "playoff_holdout": {
+    "description": "A SEPARATE, NEVER-TRAINED-ON evaluation set: all 84 real 2024-25 NBA playoff games (fetched via fetch_real_nba_data.py --season-type Playoffs into historical_games_playoffs.csv, verified as genuine playoff games via the NBA's own game_id convention). Produced by evaluate_playoff_holdout.py.",
+    "n_games": 84,
+    "baseline_accuracy": 0.583,
+    "baseline_correct": 49,
+    "hybrid_accuracy": 0.548,
+    "hybrid_correct": 46,
+    "accuracy_delta": -0.036,
+    "honest_finding": "On the swap-antisymmetric model, the hybrid pipeline scores measurably BELOW the pure-engine baseline on real playoff games (54.8% vs 58.3%, a 3-game swing out of 84) -- a larger negative delta than the pre-fix clean-baseline model's own -1.2%. Consistent with the pre-fix finding: high-leverage/playoff-adjacent games showed no real structural signal in analyze_high_leverage_variance() to begin with, so the ML layer was never clearly earning its keep on playoff basketball specifically; removing an antisymmetry-breaking feature that happened to correlate with this dataset's fixed team_a=home structure removes some of whatever edge it appeared to have here, without that edge being genuine, swap-invariant signal in the first place."
+  },
+  "prior_configurations": [
+    {
+      "description": "Clean, statistically-justified baseline (uniform 1.0x training weight; Platt-calibrated win probabilities) -- but BEFORE the swap-antisymmetry fix above: big_match_indicator was still included as a raw model input alongside the other 9 properly-antisymmetric features. Superseded once this was found to break predict_margin(A,B) == -predict_margin(B,A), the property a live team_a/team_b swap depends on. This was the highest-accuracy configuration measured in this project's history, but partly on the strength of a feature that could not correctly invert for a live matchup where the user's Team A isn't necessarily the historical dataset's always-home team_a.",
+      "source_log": "hybrid_recheck_clean_baseline.log / playoff_holdout_clean_baseline.log",
+      "measured_at": "2026-09-19T21:05:00",
+      "regular_season_hybrid_accuracy": 0.682,
+      "regular_season_baseline_accuracy": 0.649,
+      "playoff_holdout_hybrid_accuracy": 0.571,
+      "playoff_holdout_baseline_accuracy": 0.583,
+      "ml_only_holdout_directional_accuracy": 0.657
+    },
+    {
+      "description": "Unweighted (no training-time sample weighting at all) -- measured before the variance check existed to justify it, and before the swap-antisymmetry fix.",
+      "source_log": "hybrid_recheck_full_season.log",
+      "measured_at": "2026-09-19T11:34:26",
+      "regular_season_hybrid_accuracy": 0.686,
+      "ml_only_holdout_directional_accuracy": 0.657
+    },
+    {
+      "description": "Naive marquee weighting (feat_big_match_indicator >= dataset median -- roster-strength-only proxy, flagged 129/245 holdout games, chosen without a variance check).",
+      "source_log": "hybrid_recheck_marquee_weighted.log",
+      "measured_at": "2026-09-19T17:07:43",
+      "regular_season_hybrid_accuracy": 0.673,
+      "ml_only_holdout_directional_accuracy": 0.669,
+      "note": "Measurably WORSE full-pipeline accuracy despite a slightly better isolated ML-only metric -- a negative-transfer result."
+    },
+    {
+      "description": "Real-signal-weighted (2.0x multiplier applied to a rigorously-classified high-leverage flag -- game_id/standings/rematch-based, 17/245 holdout games -- but still without a formal variance check justifying the 2.0x value itself, and still evaluated with the old uncalibrated normal_cdf win-probability shortcut).",
+      "source_log": "hybrid_recheck_realsignal.log",
+      "measured_at": "2026-09-19T20:15:00",
+      "regular_season_hybrid_accuracy": 0.686,
+      "playoff_holdout_hybrid_accuracy": 0.595,
+      "ml_only_holdout_directional_accuracy": 0.661,
+      "note": "Matched the original unweighted configuration's regular-season accuracy exactly, beating the naive marquee-weighted version -- but the 2.0x multiplier itself was still arbitrary at this point; analyze_high_leverage_variance() (added afterward) confirmed no statistical basis for it."
+    }
+  ]
+}

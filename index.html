@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA GPU-Accelerated Simulator</title>
+    <!-- Tailwind CSS (Modern Sports Analytics Dark Theme) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
+
+    <!-- Header -->
+    <header class="bg-slate-900 border-b border-slate-800 py-4 px-6 shadow-md">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-wider text-orange-500 flex items-center gap-2">
+                🏀 NBA Simulation Dashboard
+            </h1>
+            <span class="text-xs bg-orange-500/10 text-orange-400 border border-orange-500/20 px-3 py-1 rounded-full font-medium">
+                GPU 100k Monte Carlo
+            </span>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- 1 & 2. Interactive Controls Panel -->
+        <section class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
+            <h2 class="text-base font-semibold border-b border-slate-800 pb-3 text-orange-400">Matchup Controls</h2>
+
+            <!-- Teams Input -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Team A</label>
+                    <input type="text" id="teamA" value="MIN" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-center text-lg font-black tracking-widest text-orange-400 focus:ring-2 focus:ring-orange-500 outline-none uppercase">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Team B</label>
+                    <input type="text" id="teamB" value="OKC" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-center text-lg font-black tracking-widest text-orange-400 focus:ring-2 focus:ring-orange-500 outline-none uppercase">
+                </div>
+            </div>
+
+            <!-- Toggles for Fatigue, Home Court, Big Match -->
+            <div class="space-y-3 pt-2 border-t border-slate-800">
+                <span class="block text-xs font-semibold uppercase text-slate-400">Real-time Parameters</span>
+
+                <!-- Home Court -->
+                <div class="flex items-center justify-between bg-slate-950/60 p-3 rounded-xl border border-slate-800/60">
+                    <span class="text-sm font-medium text-slate-300">Home Court Advantage</span>
+                    <select id="homeTeam" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200 outline-none">
+                        <option value="a">Team A Home</option>
+                        <option value="b">Team B Home</option>
+                        <option value="none">Neutral</option>
+                    </select>
+                </div>
+
+                <!-- Fatigue (B2B) -->
+                <label class="flex items-center justify-between bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 cursor-pointer">
+                    <span class="text-sm font-medium text-slate-300">Enable Fatigue (B2B)</span>
+                    <input type="checkbox" id="enableFatigue" class="w-4 h-4 accent-orange-500 rounded cursor-pointer">
+                </label>
+
+                <!-- Big Match Boost -->
+                <label class="flex items-center justify-between bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 cursor-pointer">
+                    <span class="text-sm font-medium text-slate-300">Big Match / Hot Hand Boost</span>
+                    <input type="checkbox" id="enableBigMatch" class="w-4 h-4 accent-orange-500 rounded cursor-pointer" checked>
+                </label>
+
+                <!-- Bayesian Shrinkage / Market Prior Safety Brake -->
+                <label class="flex items-center justify-between bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 cursor-pointer">
+                    <span class="text-sm font-medium text-slate-300">Prevent Overconfident Simulation</span>
+                    <input type="checkbox" id="enableShrinkage" class="w-4 h-4 accent-orange-500 rounded cursor-pointer" checked>
+                </label>
+                <p class="text-[11px] text-slate-500 -mt-2 px-1">When ON, blends the raw simulation toward a market-style prior built from each team's real season NET_RATING (a safety brake against overconfident blowout probabilities). When OFF, the dashboard shows the pure, unblended output straight from the shared-clock possession engine, for auditing.</p>
+            </div>
+
+            <!-- Interactive Roster Customization Toggle -->
+            <div class="pt-2 border-t border-slate-800">
+                <label class="flex items-center justify-between bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 cursor-pointer">
+                    <span class="text-sm font-medium text-slate-300">⚙ Customize Rosters</span>
+                    <input type="checkbox" id="enableCustomRosters" class="w-4 h-4 accent-orange-500 rounded cursor-pointer" onchange="toggleRosterEditor(this.checked)">
+                </label>
+                <p class="text-[11px] text-slate-500 mt-1.5 px-1">Override individual player stats (3PT%, Usage%, etc.), add fictional players, or remove injured/absent players before running the simulation.</p>
+            </div>
+
+            <!-- Action Button -->
+            <button onclick="runSimulation()" id="runBtn" class="w-full bg-orange-600 hover:bg-orange-500 active:scale-[0.99] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-orange-600/20 transition-all duration-150 flex items-center justify-center space-x-2">
+                <span id="btnText">Run GPU Simulation (100k)</span>
+            </button>
+
+            <!-- Single-Game Play-by-Play Action Button -->
+            <button onclick="runPlayByPlay()" id="runPbpBtn" class="w-full bg-slate-800 hover:bg-slate-700 active:scale-[0.99] text-slate-100 font-semibold py-3 rounded-xl border border-slate-700 transition-all duration-150 flex items-center justify-center space-x-2">
+                <span id="pbpBtnText">📋 Run Single-Game Play-by-Play</span>
+            </button>
+            <p class="text-[11px] text-slate-500 -mt-2 px-1">Narrates one full possession-by-possession game using the same Team A/B and toggles above, plus a 100k-game GPU batch for win-probability context. Results appear in the Play-by-Play Viewer section below.</p>
+
+            <!-- Hybrid ML Action Button -->
+            <button onclick="runHybridMl()" id="runMlBtn" class="w-full bg-purple-950/60 hover:bg-purple-900/60 active:scale-[0.99] text-purple-100 font-semibold py-3 rounded-xl border border-purple-800/60 transition-all duration-150 flex items-center justify-center space-x-2">
+                <span id="mlBtnText">🧠 Run Hybrid ML Prediction</span>
+            </button>
+            <p class="text-[11px] text-slate-500 -mt-2 px-1">Feeds this matchup through the trained XGBoost margin model (train_ml_model.py), then biases a 100k-game GPU batch toward that data-driven baseline (~68.6% measured hybrid win/loss accuracy in backtesting). Real rosters only -- turn off "Customize Rosters" first.</p>
+        </section>
+
+        <!-- 3. Modern Dashboard Interface & Seamless API Results -->
+        <section class="lg:col-span-2 space-y-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl min-h-[420px] flex flex-col justify-between">
+                <div>
+                    <h2 class="text-base font-semibold border-b border-slate-800 pb-3 mb-6 text-orange-400">Simulation Analytics</h2>
+
+                    <!-- Initial State -->
+                    <div id="welcomeState" class="text-center py-16 text-slate-500 space-y-2">
+                        <p class="text-lg">Ready to simulate matchup.</p>
+                        <p class="text-xs">Configure your parameters on the left and trigger the engine.</p>
+                    </div>
+
+                    <!-- Results Dashboard Grid (Hidden initially) -->
+                    <div id="resultContainer" class="hidden space-y-6">
+                        <!-- Shrinkage mode badge -->
+                        <div id="shrinkageBadge" class="hidden text-center text-[11px] font-semibold uppercase tracking-wider rounded-lg py-1.5"></div>
+
+                        <!-- Win Probability Cards -->
+                        <div class="grid grid-cols-2 gap-4 text-center">
+                            <div class="bg-slate-950 p-5 rounded-xl border border-slate-800">
+                                <span id="resTeamA" class="text-xs font-bold uppercase tracking-wider text-orange-400">TEAM A</span>
+                                <div class="text-4xl font-black mt-2 text-white" id="resProbA">--%</div>
+                                <div class="text-xs text-slate-400 mt-1">Win Probability</div>
+                                <div id="resProbSubA" class="text-[11px] text-slate-500 mt-1 hidden"></div>
+                                <div class="text-sm font-semibold mt-3 text-slate-300">Avg Score: <span id="resScoreA" class="text-orange-400">--</span></div>
+                            </div>
+                            <div class="bg-slate-950 p-5 rounded-xl border border-slate-800">
+                                <span id="resTeamB" class="text-xs font-bold uppercase tracking-wider text-orange-400">TEAM B</span>
+                                <div class="text-4xl font-black mt-2 text-white" id="resProbB">--%</div>
+                                <div class="text-xs text-slate-400 mt-1">Win Probability</div>
+                                <div id="resProbSubB" class="text-[11px] text-slate-500 mt-1 hidden"></div>
+                                <div class="text-sm font-semibold mt-3 text-slate-300">Avg Score: <span id="resScoreB" class="text-orange-400">--</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Statistical Metrics Box -->
+                        <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+                            <div>
+                                <span class="text-slate-500 block">GPU Elapsed Time</span>
+                                <span id="resTime" class="text-slate-200 font-mono font-bold text-sm">-- ms</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block">Point Differential (A-B)</span>
+                                <span id="resDiff" class="text-slate-200 font-mono font-bold text-sm">--</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block">Standard Deviation</span>
+                                <span id="resStd" class="text-slate-200 font-mono font-bold text-sm">--</span>
+                            </div>
+                        </div>
+
+                        <!-- Hybrid ML Prediction (only populated after "Run Hybrid ML
+                             Prediction" -- a plain GPU/blended run has no ml_* fields,
+                             so this box stays hidden for those).
+
+                             Two DIFFERENT accuracy numbers appear here on purpose --
+                             see backend/api_simulation.py's SimulateMlResponse field
+                             docs for the full explanation:
+                               - hybrid_pipeline_benchmark_accuracy (~68.6%): the FULL
+                                 pipeline (engine + ML + Hot Hand), the project's best
+                                 measured configuration -- shown FIRST, large, as the
+                                 headline number.
+                               - ml_only_holdout_accuracy (~65.7%): the ML margin model
+                                 ALONE, no engine credit -- shown last, small, as fine
+                                 print, explicitly labeled as the narrower of the two. -->
+                        <div id="hybridMlBox" class="hidden bg-gradient-to-br from-purple-950/50 to-slate-950 p-4 rounded-xl border border-purple-700/50 space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold uppercase tracking-wider text-purple-300 flex items-center gap-1.5">🧠 Hybrid ML Layer</span>
+                                <span class="text-[10px] text-slate-500">XGBoost margin model + GPU Monte Carlo</span>
+                            </div>
+
+                            <!-- Headline: best-performing measured configuration, front and center -->
+                            <div class="flex items-center gap-4 bg-purple-900/30 border border-purple-600/40 rounded-xl p-3">
+                                <div class="text-4xl font-black text-purple-300 leading-none whitespace-nowrap" id="mlBenchmarkAccuracy">--%</div>
+                                <div class="text-xs text-purple-100/90 leading-snug">
+                                    <div class="font-bold uppercase tracking-wide text-purple-300">🏆 Best Measured Configuration</div>
+                                    <div>Full Hybrid Pipeline backtest accuracy<span id="mlBenchmarkN"></span> -- vs. <span id="mlBenchmarkBaseline" class="font-semibold text-slate-300">--%</span> Monte-Carlo-only baseline</div>
+                                </div>
+                            </div>
+
+                            <!-- This specific matchup's live prediction -->
+                            <div>
+                                <div class="flex items-center gap-2 mb-1.5">
+                                    <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">This Matchup's Prediction</span>
+                                    <span id="mlContextBadge" class="hidden text-[10px] font-semibold uppercase tracking-wider text-amber-300 bg-amber-900/30 border border-amber-700/40 rounded-full px-2 py-0.5">⚡ Context-adjusted</span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-3 text-center">
+                                    <div>
+                                        <div class="text-lg font-black text-white" id="mlPredMargin">--</div>
+                                        <div class="text-[10px] text-slate-500">Predicted Margin (A-B)</div>
+                                        <div id="mlBaseMarginNote" class="hidden text-[10px] text-slate-600">base: --</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-lg font-black text-white" id="mlWinProbA">--%</div>
+                                        <div class="text-[10px] text-slate-500">ML Win Prob (Team A)</div>
+                                        <div id="mlCalibrationNote" class="hidden text-[10px] text-slate-600">calibrated: --</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-lg font-black text-white" id="mlConfidence">--%</div>
+                                        <div class="text-[10px] text-slate-500">Confidence (vs. toss-up)</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p id="mlHoldoutNote" class="text-[11px] text-slate-500 border-t border-purple-800/30 pt-2"></p>
+                            <p id="mlPlayoffNote" class="hidden text-[11px] text-amber-400/90"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Warnings Bar -->
+                <div id="warningBox" class="hidden mt-4 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs p-3 rounded-xl"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Single-Game Play-by-Play Viewer -->
+    <section id="pbpSection" class="max-w-7xl mx-auto px-6 pb-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                <h2 class="text-base font-semibold text-orange-400 flex items-center gap-2">📋 Single-Game Play-by-Play Viewer</h2>
+                <span class="text-[11px] text-slate-500">Uses the Team A / Team B and toggles set in Matchup Controls above.</span>
+            </div>
+
+            <div id="pbpWelcomeState" class="text-center py-10 text-slate-500 space-y-2">
+                <p class="text-sm">No single-game simulation run yet.</p>
+                <p class="text-xs">Set Team A / Team B and toggles above, then click "Run Single-Game Play-by-Play".</p>
+            </div>
+
+            <div id="pbpWarningBox" class="hidden bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs p-3 rounded-xl"></div>
+
+            <div id="pbpResultContainer" class="hidden space-y-6">
+                <!-- Final Result metrics -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                        <span class="text-xs font-bold uppercase tracking-wider text-orange-400" id="pbpResTeamA">TEAM A</span>
+                        <div class="text-3xl font-black mt-1 text-white" id="pbpResScoreA">--</div>
+                        <div class="text-[11px] text-slate-500">Final Score</div>
+                    </div>
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                        <span class="text-xs font-bold uppercase tracking-wider text-orange-400" id="pbpResTeamB">TEAM B</span>
+                        <div class="text-3xl font-black mt-1 text-white" id="pbpResScoreB">--</div>
+                        <div class="text-[11px] text-slate-500">Final Score</div>
+                    </div>
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                        <div class="text-lg font-bold mt-2 text-emerald-400" id="pbpResWinner">--</div>
+                        <div class="text-[11px] text-slate-500">Winner (this game)</div>
+                    </div>
+                    <div id="pbpResWinProbBox" class="hidden bg-slate-950 p-4 rounded-xl border border-slate-800">
+                        <div class="text-lg font-bold mt-2 text-white" id="pbpResWinProb">--</div>
+                        <div class="text-[11px] text-slate-500">Team A win prob (100k-game GPU batch)</div>
+                    </div>
+                </div>
+
+                <!-- Score progression chart -->
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-300 mb-2">Score Progression &amp; Momentum Shifts</h3>
+                    <div id="pbpChartContainer" class="bg-slate-950/60 rounded-xl border border-slate-800/60 p-3"></div>
+                </div>
+
+                <!-- Quarter-by-quarter breakdown -->
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-300 mb-2">Quarter-by-Quarter Breakdown</h3>
+                    <div class="overflow-x-auto rounded-xl border border-slate-800">
+                        <table class="w-full text-xs">
+                            <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
+                                <tr>
+                                    <th class="p-2">Period</th>
+                                    <th class="p-2" id="pbpQuarterColA">Team A</th>
+                                    <th class="p-2" id="pbpQuarterColB">Team B</th>
+                                    <th class="p-2">Possessions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pbpQuarterTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Chronological event log -->
+                <div>
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <h3 class="text-sm font-semibold text-slate-300">Chronological Play-by-Play Log</h3>
+                        <div class="flex gap-3 text-xs text-slate-400">
+                            <label class="flex items-center gap-1 cursor-pointer">
+                                <input type="checkbox" id="pbpFilter_possession" checked onchange="renderPbpEventTable(pbpEventsCache)" class="accent-orange-500">Possessions
+                            </label>
+                            <label class="flex items-center gap-1 cursor-pointer">
+                                <input type="checkbox" id="pbpFilter_substitution" checked onchange="renderPbpEventTable(pbpEventsCache)" class="accent-orange-500">Substitutions
+                            </label>
+                            <label class="flex items-center gap-1 cursor-pointer">
+                                <input type="checkbox" id="pbpFilter_period" checked onchange="renderPbpEventTable(pbpEventsCache)" class="accent-orange-500">Period markers
+                            </label>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto rounded-xl border border-slate-800 max-h-[500px] overflow-y-auto">
+                        <table class="w-full text-xs">
+                            <thead class="bg-slate-950 text-slate-400 uppercase text-[10px] sticky top-0">
+                                <tr>
+                                    <th class="p-2">Period</th>
+                                    <th class="p-2">Clock</th>
+                                    <th class="p-2">Team</th>
+                                    <th class="p-2">Type</th>
+                                    <th class="p-2 text-left">Description</th>
+                                    <th class="p-2">Pts</th>
+                                    <th class="p-2">A</th>
+                                    <th class="p-2">B</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pbpEventTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Raw text -->
+                <details class="bg-slate-950/60 rounded-xl border border-slate-800/60 p-3">
+                    <summary class="text-xs text-slate-400 cursor-pointer select-none">Raw play-by-play text (unparsed, always authoritative)</summary>
+                    <pre id="pbpRawText" class="text-[11px] text-slate-400 mt-2 whitespace-pre-wrap max-h-96 overflow-y-auto"></pre>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Roster Customization Panel -->
+    <section id="rosterEditorSection" class="hidden max-w-7xl mx-auto px-6 pb-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                <h2 class="text-base font-semibold text-orange-400">Interactive Roster Customization</h2>
+                <span class="text-[11px] text-slate-500">Edited stats here fully override live data for the simulation run below (sent as a custom roster to both C++/CUDA engines).</span>
+            </div>
+
+            <div id="rosterCustomWarning" class="hidden bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs p-3 rounded-xl"></div>
+
+            <!-- Player Search & Dropdown Import -->
+            <div>
+                <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">🔍 Player Search &amp; Import</label>
+                <div class="relative">
+                    <input type="text" id="playerSearchInput" placeholder="Search any real player (e.g. Victor Wembanyama)..." autocomplete="off"
+                           class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-200 focus:ring-2 focus:ring-orange-500 outline-none"
+                           oninput="handlePlayerSearchInput(this.value)"
+                           onfocus="handlePlayerSearchInput(this.value)">
+                    <div id="playerSearchDropdown" class="hidden absolute z-20 mt-1 w-full max-h-80 overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl shadow-2xl"></div>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-1.5 px-1">Select a real player to import (trade) their exact live stats onto Team A or Team B's custom roster -- they're automatically removed from the other side if they were sitting there.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Team A roster editor -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 id="rosterLabelA" class="text-sm font-bold text-orange-400">Team A Roster</h3>
+                        <div class="space-x-2">
+                            <button onclick="reloadTeamRoster('a')" class="text-[11px] text-slate-400 hover:text-orange-400 underline">Reload Live Stats</button>
+                            <button onclick="addCustomPlayer('a')" class="text-[11px] bg-orange-600/20 text-orange-400 px-2 py-1 rounded-lg hover:bg-orange-600/30">+ Add Player</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto rounded-xl border border-slate-800">
+                        <table class="w-full text-xs">
+                            <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
+                                <tr>
+                                    <th class="p-2 text-left">Player</th>
+                                    <th class="p-2">Pos</th>
+                                    <th class="p-2">3PT%</th>
+                                    <th class="p-2">3PA</th>
+                                    <th class="p-2">USG%</th>
+                                    <th class="p-2">MIN</th>
+                                    <th class="p-2"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="rosterTableA"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Team B roster editor -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 id="rosterLabelB" class="text-sm font-bold text-orange-400">Team B Roster</h3>
+                        <div class="space-x-2">
+                            <button onclick="reloadTeamRoster('b')" class="text-[11px] text-slate-400 hover:text-orange-400 underline">Reload Live Stats</button>
+                            <button onclick="addCustomPlayer('b')" class="text-[11px] bg-orange-600/20 text-orange-400 px-2 py-1 rounded-lg hover:bg-orange-600/30">+ Add Player</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto rounded-xl border border-slate-800">
+                        <table class="w-full text-xs">
+                            <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
+                                <tr>
+                                    <th class="p-2 text-left">Player</th>
+                                    <th class="p-2">Pos</th>
+                                    <th class="p-2">3PT%</th>
+                                    <th class="p-2">3PA</th>
+                                    <th class="p-2">USG%</th>
+                                    <th class="p-2">MIN</th>
+                                    <th class="p-2"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="rosterTableB"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Seamless API JavaScript Integration -->
+    <script>
+        const API_URL = "http://127.0.0.1:8000/api/simulate";
+        const ML_API_URL = "http://127.0.0.1:8000/api/simulate-ml";
+        const PLAYERS_URL = "http://127.0.0.1:8000/api/players";
+        const TEAM_DEFENSE_URL = "http://127.0.0.1:8000/api/team_defense";
+
+        // --- Interactive Roster Customization state -------------------------
+        // Mirrors backend/api_simulation.py's CustomPlayer schema exactly
+        // (player_name, position, fg3_pct, fg3a, usage_rate, min) so these
+        // objects can be sent straight through as custom_roster_a/b.players.
+        // `defRating` is the team-level (not per-player) real defensive
+        // rating -- see getTeamDefRating() -- so a custom roster built from
+        // a real team's real players keeps that team's real intrinsic
+        // defensive-resistance effect instead of it silently going neutral.
+        const ROSTER_FIELD_RANGES = { fg3_pct: [0, 1], fg3a: [0, 20], usage_rate: [0, 100], min: [0, 48] };
+        const customRosters = {
+            a: { loaded: false, teamCode: "", defRating: null, players: [] },
+            b: { loaded: false, teamCode: "", defRating: null, players: [] },
+        };
+
+        // Cached full /api/team_defense response (team_abbreviation -> real
+        // def_rating), fetched at most once per page session.
+        let teamDefenseCache = null;
+
+        async function getTeamDefRating(teamCode) {
+            try {
+                if (!teamDefenseCache) {
+                    const resp = await fetch(TEAM_DEFENSE_URL);
+                    if (!resp.ok) throw new Error(`status ${resp.status}`);
+                    teamDefenseCache = await resp.json();
+                }
+                const match = teamDefenseCache.find((t) => (t.team_abbreviation || "").toUpperCase() === teamCode);
+                return match ? match.def_rating : null;
+            } catch (err) {
+                // Non-fatal: the engine's neutral default applies, same as
+                // a normal real-mode run when /api/team_defense is down.
+                return null;
+            }
+        }
+
+        function toggleRosterEditor(enabled) {
+            const section = document.getElementById("rosterEditorSection");
+            if (enabled) {
+                section.classList.remove("hidden");
+                // Only auto-load a side that hasn't been populated yet --
+                // preserves any edits/imports already made if the user
+                // unchecks and rechecks this box mid-session.
+                if (!customRosters.a.loaded) loadTeamRoster("a");
+                if (!customRosters.b.loaded) loadTeamRoster("b");
+            } else {
+                section.classList.add("hidden");
+            }
+        }
+
+        // Strips accents/diacritics (e.g. "Dončić" -> "Doncic") then drops
+        // anything outside backend's PLAYER_NAME_RE character set (letters,
+        // digits, spaces, '.', '-', "'"), so real NBA names round-trip
+        // through the API validator instead of failing with a 422.
+        function sanitizeName(name) {
+            const stripped = (name || "").normalize("NFD").replace(/[̀-ͯ]/g, "");
+            return stripped.replace(/[^A-Za-z0-9 .'-]/g, "").slice(0, 60).trim();
+        }
+
+        // /api/players returns SEASON-CUMULATIVE totals for counting stats
+        // (e.g. a star's `min` field is ~2800, a full season, not a
+        // per-game figure), while fg3_pct/usage_rate are already rate
+        // stats. Dividing by games played (`gp`) here converts `min`/`fg3a`
+        // to realistic per-game figures BEFORE they hit the 0-48/0-20
+        // clamps below -- without this, every rotation player's fg3a/min
+        // clamps to the exact same ceiling (20.0 / 48.0), which is what
+        // made the roster builder look like it was falling back to a
+        // generic/balanced template instead of each player's real stats.
+        function apiPlayerToCustomPlayer(p) {
+            const gp = p.gp && p.gp > 0 ? p.gp : 1;
+            return {
+                player_name: sanitizeName(p.player_name) || "Player",
+                position: (p.position || "SG").slice(0, 8),
+                fg3_pct: clamp(p.fg3_pct != null ? p.fg3_pct : 0.35, 0, 1),
+                fg3a: clamp(p.fg3a != null ? p.fg3a / gp : 3.0, 0, 20),
+                usage_rate: clamp(p.usage_rate != null ? p.usage_rate : 20.0, 0, 100),
+                min: clamp(p.min != null ? p.min / gp : 20.0, 0, 48),
+            };
+        }
+
+        function clamp(value, lo, hi) {
+            return Math.min(hi, Math.max(lo, value));
+        }
+
+        function showRosterWarning(message) {
+            const box = document.getElementById("rosterCustomWarning");
+            box.textContent = message;
+            box.classList.remove("hidden");
+        }
+
+        function hideRosterWarning() {
+            document.getElementById("rosterCustomWarning").classList.add("hidden");
+        }
+
+        // --- Player Search & Dropdown Import ---------------------------------
+        // Caches the full /api/players response the first time the search box
+        // is used, so subsequent keystrokes filter in-memory rather than
+        // re-fetching the whole league on every character typed.
+        let allPlayersCache = null;
+        let playerSearchDebounce = null;
+
+        async function ensurePlayersCache() {
+            if (allPlayersCache) return allPlayersCache;
+            const resp = await fetch(PLAYERS_URL);
+            if (!resp.ok) throw new Error(`status ${resp.status}`);
+            allPlayersCache = await resp.json();
+            return allPlayersCache;
+        }
+
+        function handlePlayerSearchInput(query) {
+            clearTimeout(playerSearchDebounce);
+            playerSearchDebounce = setTimeout(() => runPlayerSearch(query), 150);
+        }
+
+        async function runPlayerSearch(query) {
+            const dropdown = document.getElementById("playerSearchDropdown");
+            const trimmed = (query || "").trim();
+            if (trimmed.length < 2) {
+                dropdown.classList.add("hidden");
+                dropdown.innerHTML = "";
+                return;
+            }
+
+            let players;
+            try {
+                players = await ensurePlayersCache();
+            } catch (err) {
+                dropdown.innerHTML = "";
+                const errRow = document.createElement("div");
+                errRow.className = "p-3 text-xs text-amber-400";
+                errRow.textContent = `Could not load player list (${err.message}).`;
+                dropdown.appendChild(errRow);
+                dropdown.classList.remove("hidden");
+                return;
+            }
+
+            const q = trimmed.toLowerCase();
+            const matches = players
+                .filter((p) => (p.player_name || "").toLowerCase().includes(q))
+                .slice(0, 8);
+
+            dropdown.innerHTML = "";
+            if (matches.length === 0) {
+                const emptyRow = document.createElement("div");
+                emptyRow.className = "p-3 text-xs text-slate-500";
+                emptyRow.textContent = `No players found for "${trimmed}".`;
+                dropdown.appendChild(emptyRow);
+            } else {
+                matches.forEach((p) => dropdown.appendChild(renderPlayerSearchRow(p)));
+            }
+            dropdown.classList.remove("hidden");
+        }
+
+        function renderPlayerSearchRow(rawPlayer) {
+            const row = document.createElement("div");
+            row.className = "flex items-center justify-between gap-2 p-2.5 border-b border-slate-800/60 last:border-b-0 hover:bg-slate-900";
+
+            const gp = rawPlayer.gp && rawPlayer.gp > 0 ? rawPlayer.gp : 1;
+            const perGameMin = rawPlayer.min != null ? rawPlayer.min / gp : null;
+
+            const info = document.createElement("div");
+            info.className = "min-w-0";
+            const nameEl = document.createElement("div");
+            nameEl.className = "text-sm font-semibold text-slate-100 truncate";
+            nameEl.textContent = rawPlayer.player_name || "Unknown";
+            const metaEl = document.createElement("div");
+            metaEl.className = "text-[11px] text-slate-500 truncate";
+            metaEl.textContent = `${rawPlayer.team_abbreviation || "FA"} · ${rawPlayer.position || "?"} · `
+                + `${perGameMin != null ? perGameMin.toFixed(1) : "--"} MIN · `
+                + `${rawPlayer.fg3_pct != null ? (rawPlayer.fg3_pct * 100).toFixed(1) : "--"}% 3PT · `
+                + `${rawPlayer.usage_rate != null ? rawPlayer.usage_rate.toFixed(1) : "--"}% USG`;
+            info.appendChild(nameEl);
+            info.appendChild(metaEl);
+
+            const btnWrap = document.createElement("div");
+            btnWrap.className = "flex gap-1.5 shrink-0";
+            const btnA = document.createElement("button");
+            btnA.textContent = "→ A";
+            btnA.title = "Import to Team A";
+            btnA.className = "text-[11px] font-semibold bg-orange-600/20 text-orange-400 px-2 py-1 rounded-lg hover:bg-orange-600/30";
+            btnA.onclick = () => importPlayerToTeam(rawPlayer, "a");
+            const btnB = document.createElement("button");
+            btnB.textContent = "→ B";
+            btnB.title = "Import to Team B";
+            btnB.className = "text-[11px] font-semibold bg-orange-600/20 text-orange-400 px-2 py-1 rounded-lg hover:bg-orange-600/30";
+            btnB.onclick = () => importPlayerToTeam(rawPlayer, "b");
+            btnWrap.appendChild(btnA);
+            btnWrap.appendChild(btnB);
+
+            row.appendChild(info);
+            row.appendChild(btnWrap);
+            return row;
+        }
+
+        // Imports a real player (found via search) onto `side`'s custom
+        // roster with their exact live stats (per-game converted -- see
+        // apiPlayerToCustomPlayer). A genuine trade, mirroring
+        // cpp_engine/cuda_main.cpp's interactive "Smart Player Import" flow:
+        // if this player is currently sitting on the OTHER customized
+        // team's in-progress roster, they're removed from there first so
+        // they never appear on both sides of the same matchup. Re-importing
+        // an already-present player on the same side just refreshes their
+        // row instead of duplicating it.
+        function importPlayerToTeam(rawPlayer, side) {
+            if (!customRosters[side].teamCode) {
+                const inputId = side === "a" ? "teamA" : "teamB";
+                customRosters[side].teamCode = document.getElementById(inputId).value.toUpperCase().trim()
+                    || (side === "a" ? "TEAM_A" : "TEAM_B");
+            }
+            customRosters[side].loaded = true;
+
+            const newPlayer = apiPlayerToCustomPlayer(rawPlayer);
+            const otherSide = side === "a" ? "b" : "a";
+
+            customRosters[otherSide].players = customRosters[otherSide].players.filter(
+                (existing) => existing.player_name !== newPlayer.player_name
+            );
+            customRosters[side].players = customRosters[side].players.filter(
+                (existing) => existing.player_name !== newPlayer.player_name
+            );
+            customRosters[side].players.push(newPlayer);
+
+            // Make sure the roster panel itself is visible -- a search
+            // import can happen even if the customization toggle was only
+            // just checked and loadTeamRoster() is still resolving.
+            document.getElementById("rosterEditorSection").classList.remove("hidden");
+            document.getElementById("enableCustomRosters").checked = true;
+
+            renderRosterTable("a");
+            renderRosterTable("b");
+
+            document.getElementById("playerSearchDropdown").classList.add("hidden");
+            document.getElementById("playerSearchInput").value = "";
+
+            showRosterWarning(`Imported ${newPlayer.player_name} to Team ${side.toUpperCase()}'s custom roster.`);
+            setTimeout(hideRosterWarning, 3000);
+        }
+
+        // Closes the search dropdown on an outside click.
+        document.addEventListener("click", (e) => {
+            const dropdown = document.getElementById("playerSearchDropdown");
+            const input = document.getElementById("playerSearchInput");
+            if (dropdown && input && e.target !== input && !dropdown.contains(e.target)) {
+                dropdown.classList.add("hidden");
+            }
+        });
+
+        // Fetches the live league roster from /api/players and seeds this
+        // team's editable player list from it (top 15 by minutes, so the
+        // editor stays a manageable rotation rather than a full 18-man
+        // roster). Falls back to an empty, manually-buildable roster if the
+        // backend/DB is unreachable, rather than blocking customization.
+        async function loadTeamRoster(side) {
+            const inputId = side === "a" ? "teamA" : "teamB";
+            const teamCode = document.getElementById(inputId).value.toUpperCase().trim();
+            const label = document.getElementById(side === "a" ? "rosterLabelA" : "rosterLabelB");
+            hideRosterWarning();
+
+            if (!teamCode) {
+                showRosterWarning(`Enter a Team ${side.toUpperCase()} abbreviation before loading its roster.`);
+                return;
+            }
+
+            try {
+                const resp = await fetch(PLAYERS_URL);
+                if (!resp.ok) throw new Error(`status ${resp.status}`);
+                const allPlayers = await resp.json();
+                const teamPlayers = allPlayers
+                    .filter((p) => (p.team_abbreviation || "").toUpperCase() === teamCode)
+                    .sort((x, y) => (y.min || 0) - (x.min || 0))   // season-total minutes still ranks a rotation correctly
+                    .slice(0, 15)
+                    .map(apiPlayerToCustomPlayer);
+
+                customRosters[side].players = teamPlayers;
+                customRosters[side].teamCode = teamCode;
+                customRosters[side].loaded = true;
+                // Real, live defensive rating for this team -- carries the
+                // engine's intrinsic defensive-resistance effect through to
+                // this custom roster even with zero edits (see point 3:
+                // preserving baseline accuracy). null if unavailable (e.g.
+                // an unrecognized/fictional abbreviation), which the engine
+                // treats as its normal neutral default -- same as always.
+                customRosters[side].defRating = await getTeamDefRating(teamCode);
+
+                if (teamPlayers.length === 0) {
+                    showRosterWarning(`No live players found for "${teamCode}" -- add players manually below, or check the abbreviation.`);
+                }
+            } catch (err) {
+                customRosters[side].teamCode = customRosters[side].teamCode || teamCode;
+                customRosters[side].loaded = true;
+                showRosterWarning(`Could not load live roster for ${teamCode} (${err.message}). You can still add players manually below.`);
+            }
+
+            if (label) label.textContent = `${customRosters[side].teamCode || teamCode} Roster`;
+            renderRosterTable(side);
+        }
+
+        function reloadTeamRoster(side) {
+            customRosters[side].loaded = false;
+            loadTeamRoster(side);
+        }
+
+        function addCustomPlayer(side) {
+            if (!customRosters[side].teamCode) {
+                const inputId = side === "a" ? "teamA" : "teamB";
+                customRosters[side].teamCode = document.getElementById(inputId).value.toUpperCase().trim() || (side === "a" ? "TEAM_A" : "TEAM_B");
+            }
+            customRosters[side].players.push({
+                player_name: "New Player", position: "SG", fg3_pct: 0.350, fg3a: 3.0, usage_rate: 20.0, min: 20.0,
+            });
+            customRosters[side].loaded = true;
+            renderRosterTable(side);
+        }
+
+        function removeCustomPlayer(side, index) {
+            customRosters[side].players.splice(index, 1);
+            renderRosterTable(side);
+        }
+
+        function updateCustomPlayerField(side, index, field, inputEl) {
+            const player = customRosters[side].players[index];
+            if (field === "player_name") {
+                player.player_name = sanitizeName(inputEl.value) || "Player";
+                inputEl.value = player.player_name;
+            } else if (field === "position") {
+                player.position = inputEl.value.trim().slice(0, 8) || "SG";
+                inputEl.value = player.position;
+            } else {
+                const num = parseFloat(inputEl.value);
+                const [lo, hi] = ROSTER_FIELD_RANGES[field];
+                if (!isNaN(num)) player[field] = clamp(num, lo, hi);
+                inputEl.value = player[field];
+            }
+        }
+
+        function renderRosterTable(side) {
+            const tbody = document.getElementById(side === "a" ? "rosterTableA" : "rosterTableB");
+            tbody.innerHTML = "";
+            customRosters[side].players.forEach((p, i) => {
+                const tr = document.createElement("tr");
+                tr.className = "border-t border-slate-800/60";
+
+                const nameTd = document.createElement("td");
+                nameTd.className = "p-1";
+                nameTd.appendChild(makeRosterInput("text", p.player_name, "w-28", (el) => updateCustomPlayerField(side, i, "player_name", el), { maxlength: 60 }));
+                tr.appendChild(nameTd);
+
+                const posTd = document.createElement("td");
+                posTd.className = "p-1";
+                posTd.appendChild(makeRosterInput("text", p.position, "w-12 text-center", (el) => updateCustomPlayerField(side, i, "position", el), { maxlength: 8 }));
+                tr.appendChild(posTd);
+
+                const fg3pctTd = document.createElement("td");
+                fg3pctTd.className = "p-1";
+                fg3pctTd.appendChild(makeRosterInput("number", p.fg3_pct, "w-16 text-center", (el) => updateCustomPlayerField(side, i, "fg3_pct", el), { step: "0.001", min: 0, max: 1 }));
+                tr.appendChild(fg3pctTd);
+
+                const fg3aTd = document.createElement("td");
+                fg3aTd.className = "p-1";
+                fg3aTd.appendChild(makeRosterInput("number", p.fg3a, "w-14 text-center", (el) => updateCustomPlayerField(side, i, "fg3a", el), { step: "0.1", min: 0, max: 20 }));
+                tr.appendChild(fg3aTd);
+
+                const usgTd = document.createElement("td");
+                usgTd.className = "p-1";
+                usgTd.appendChild(makeRosterInput("number", p.usage_rate, "w-14 text-center", (el) => updateCustomPlayerField(side, i, "usage_rate", el), { step: "0.1", min: 0, max: 100 }));
+                tr.appendChild(usgTd);
+
+                const minTd = document.createElement("td");
+                minTd.className = "p-1";
+                minTd.appendChild(makeRosterInput("number", p.min, "w-14 text-center", (el) => updateCustomPlayerField(side, i, "min", el), { step: "0.1", min: 0, max: 48 }));
+                tr.appendChild(minTd);
+
+                const removeTd = document.createElement("td");
+                removeTd.className = "p-1 text-center";
+                const removeBtn = document.createElement("button");
+                removeBtn.textContent = "✕";
+                removeBtn.className = "text-red-400 hover:text-red-300";
+                removeBtn.onclick = () => removeCustomPlayer(side, i);
+                removeTd.appendChild(removeBtn);
+                tr.appendChild(removeTd);
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Built via the DOM API (not innerHTML string interpolation) so
+        // player-name/position values -- which may contain quote characters
+        // -- are always treated as plain text, never parsed as markup.
+        function makeRosterInput(type, value, cssClass, onChange, attrs) {
+            const input = document.createElement("input");
+            input.type = type;
+            input.value = value;
+            input.className = `bg-slate-950 border border-slate-800 rounded px-1 py-1 text-slate-200 ${cssClass}`;
+            Object.entries(attrs || {}).forEach(([k, v]) => input.setAttribute(k, v));
+            input.addEventListener("change", () => onChange(input));
+            return input;
+        }
+
+        // Shared by runSimulation() (GPU) and runPlayByPlay() (CPU + GPU
+        // context) -- attaches either roster_type="real" or a full
+        // custom_roster_a/b pair to `payload` in place. Throws a plain Error
+        // (with a user-facing message) instead of alerting directly, so
+        // each caller can present it in its own UI location.
+        async function attachRosterFields(payload, teamA, teamB) {
+            const useCustomRosters = document.getElementById("enableCustomRosters").checked;
+            if (!useCustomRosters) {
+                payload.roster_type = "real";
+                return;
+            }
+
+            // Both sides of the C++/CUDA --custom-roster JSON payload must
+            // be present (the engine loads a complete matchup from one
+            // file, never a mix of custom + live-fetched rosters), so make
+            // sure both teams are loaded before submitting even if the user
+            // only edited one side. Safe to call repeatedly across two
+            // payloads (CPU + GPU) -- loadTeamRoster() no-ops once loaded.
+            if (!customRosters.a.loaded) await loadTeamRoster("a");
+            if (!customRosters.b.loaded) await loadTeamRoster("b");
+
+            if (customRosters.a.players.length === 0 || customRosters.b.players.length === 0) {
+                throw new Error("Roster customization is enabled but one or both teams have no players. Add at least one player per team (\"+ Add Player\") or turn off customization.");
+            }
+
+            payload.roster_type = "custom";
+            payload.custom_roster_a = {
+                team_name: customRosters.a.teamCode || teamA,
+                players: customRosters.a.players,
+                ...(customRosters.a.defRating != null ? { def_rating: customRosters.a.defRating } : {}),
+            };
+            payload.custom_roster_b = {
+                team_name: customRosters.b.teamCode || teamB,
+                players: customRosters.b.players,
+                ...(customRosters.b.defRating != null ? { def_rating: customRosters.b.defRating } : {}),
+            };
+        }
+
+        async function runSimulation() {
+            const teamA = document.getElementById("teamA").value.toUpperCase().trim();
+            const teamB = document.getElementById("teamB").value.toUpperCase().trim();
+            const homeTeam = document.getElementById("homeTeam").value;
+            const enableFatigue = document.getElementById("enableFatigue").checked;
+            const enableBigMatch = document.getElementById("enableBigMatch").checked;
+            const enableShrinkage = document.getElementById("enableShrinkage").checked;
+
+            const runBtn = document.getElementById("runBtn");
+            const btnText = document.getElementById("btnText");
+
+            // UI Loading state
+            runBtn.disabled = true;
+            btnText.textContent = "Executing GPU Pipeline (100k)...";
+
+            document.getElementById("welcomeState").classList.add("hidden");
+            document.getElementById("resultContainer").classList.add("hidden");
+            document.getElementById("warningBox").classList.add("hidden");
+
+            let payload = {
+                mode: "gpu",
+                team_a: teamA,
+                team_b: teamB,
+                enable_fatigue: enableFatigue,
+                team_b_rest_days: enableFatigue ? 0 : 2,
+                enable_big_match: enableBigMatch,
+                enable_shrinkage: enableShrinkage
+            };
+
+            if (homeTeam !== "none") {
+                payload.home_team = homeTeam;
+            }
+
+            try {
+                await attachRosterFields(payload, teamA, teamB);
+                let response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                let data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || "Server error occurred.");
+                }
+
+                renderGpuResult(data, teamA, teamB);
+
+            } catch (error) {
+                alert("API Connection Error: " + error.message + "\n(Ensure Uvicorn backend and CORS are active)");
+            } finally {
+                runBtn.disabled = false;
+                btnText.textContent = "Run GPU Simulation (100k)";
+            }
+        }
+
+        // Shared by runSimulation() (plain /api/simulate, gpu mode) and
+        // runHybridMl() (/api/simulate-ml -- a strict superset of the same
+        // fields, plus ml_*) -- both render into the same "Simulation
+        // Analytics" card, so a Hybrid ML run shows its win probability/avg
+        // score/shrinkage-badge exactly like a normal GPU run, with the
+        // extra Hybrid ML panel appended below when ml_* fields are present.
+        function renderGpuResult(data, teamA, teamB) {
+            document.getElementById("resultContainer").classList.remove("hidden");
+            document.getElementById("resTeamA").textContent = data.resolved_team_a || teamA;
+            document.getElementById("resTeamB").textContent = data.resolved_team_b || teamB;
+
+            document.getElementById("resProbA").textContent = (data.win_probability_a * 100).toFixed(1) + "%";
+            document.getElementById("resProbB").textContent = (data.win_probability_b * 100).toFixed(1) + "%";
+
+            document.getElementById("resScoreA").textContent = data.average_score_a.toFixed(1);
+            document.getElementById("resScoreB").textContent = data.average_score_b.toFixed(1);
+
+            // Layer 2 diagnostics: badge + raw-vs-prior sub-line, so the
+            // toggle is verifiable, not just a black-box switch.
+            const badge = document.getElementById("shrinkageBadge");
+            const subA = document.getElementById("resProbSubA");
+            const subB = document.getElementById("resProbSubB");
+            if (data.mode === "gpu" && data.shrinkage_applied) {
+                badge.textContent = "Blended -- Market-Prior Safety Brake ON";
+                badge.className = "text-center text-[11px] font-semibold uppercase tracking-wider rounded-lg py-1.5 bg-emerald-900/40 text-emerald-300 border border-emerald-800/60";
+                badge.classList.remove("hidden");
+                subA.textContent = `Raw: ${(data.raw_win_probability_a * 100).toFixed(1)}% / Prior: ${(data.market_prior_probability_a * 100).toFixed(1)}%`;
+                subB.textContent = `Raw: ${(data.raw_win_probability_b * 100).toFixed(1)}% / Prior: ${(data.market_prior_probability_b * 100).toFixed(1)}%`;
+                subA.classList.remove("hidden");
+                subB.classList.remove("hidden");
+            } else if (data.mode === "gpu") {
+                badge.textContent = "Pure Raw Simulation Output (safety brake OFF)";
+                badge.className = "text-center text-[11px] font-semibold uppercase tracking-wider rounded-lg py-1.5 bg-slate-800/60 text-slate-400 border border-slate-700/60";
+                badge.classList.remove("hidden");
+                subA.classList.add("hidden");
+                subB.classList.add("hidden");
+            } else {
+                badge.classList.add("hidden");
+                subA.classList.add("hidden");
+                subB.classList.add("hidden");
+            }
+
+            document.getElementById("resTime").textContent = data.elapsed_ms.toFixed(1) + " ms";
+            document.getElementById("resDiff").textContent = data.average_point_differential_a_minus_b.toFixed(2);
+            document.getElementById("resStd").textContent = data.point_differential_std_dev.toFixed(2);
+
+            const warnBox = document.getElementById("warningBox");
+            if (data.warnings && data.warnings.length > 0) {
+                warnBox.textContent = "Notice: " + data.warnings.join(" | ");
+                warnBox.classList.remove("hidden");
+            } else {
+                warnBox.classList.add("hidden");
+            }
+
+            // A plain /api/simulate response has no ml_* fields at all --
+            // only /api/simulate-ml's SimulateMlResponse does -- so this
+            // panel naturally stays hidden for a normal GPU/blended run.
+            if (data.ml_predicted_margin_a_minus_b != null) {
+                renderHybridMlBox(data);
+            } else {
+                document.getElementById("hybridMlBox").classList.add("hidden");
+            }
+        }
+
+        // Two DIFFERENT accuracy numbers render here on purpose -- see
+        // backend/api_simulation.py's SimulateMlResponse field docs:
+        //   - hybrid_pipeline_benchmark_accuracy (~68.6%): the FULL pipeline
+        //     (engine + ML + Hot Hand)'s real backtest accuracy -- the
+        //     project's best measured configuration. Rendered big, first,
+        //     as the headline "at a glance" number.
+        //   - ml_only_holdout_accuracy (~65.7%): the ML margin model ALONE,
+        //     no engine credit -- rendered small, last, as fine print,
+        //     explicitly labeled "ML signal alone" so it's never mistaken
+        //     for the headline figure above it.
+        function renderHybridMlBox(data) {
+            // Headline benchmark -- the best-performing configuration, shown
+            // first and largest so there's no confusion about which number
+            // is "the" accuracy figure for this feature.
+            const benchAcc = document.getElementById("mlBenchmarkAccuracy");
+            const benchN = document.getElementById("mlBenchmarkN");
+            const benchBaseline = document.getElementById("mlBenchmarkBaseline");
+            if (data.hybrid_pipeline_benchmark_accuracy != null) {
+                benchAcc.textContent = (data.hybrid_pipeline_benchmark_accuracy * 100).toFixed(1) + "%";
+                benchN.textContent = data.hybrid_pipeline_benchmark_n_games != null
+                    ? ` (n=${data.hybrid_pipeline_benchmark_n_games} backtest)` : "";
+                benchBaseline.textContent = data.hybrid_pipeline_benchmark_baseline_accuracy != null
+                    ? (data.hybrid_pipeline_benchmark_baseline_accuracy * 100).toFixed(1) + "%" : "--%";
+            } else {
+                benchAcc.textContent = "--%";
+                benchN.textContent = "";
+                benchBaseline.textContent = "--%";
+            }
+
+            // This specific matchup's live prediction -- reacts to the Big
+            // Match/Hot Hand Boost and Fatigue toggles (see
+            // backend/api_simulation.py's apply_contextual_ml_adjustment()):
+            // the displayed margin/win-prob/confidence below are the
+            // CONTEXT-ADJUSTED figures, distinct from the unadjusted base
+            // value actually fed into the GPU engine's --ml-margin.
+            document.getElementById("mlPredMargin").textContent =
+                (data.ml_predicted_margin_a_minus_b >= 0 ? "+" : "") + data.ml_predicted_margin_a_minus_b.toFixed(1);
+            document.getElementById("mlWinProbA").textContent = (data.ml_win_probability_a * 100).toFixed(1) + "%";
+            document.getElementById("mlConfidence").textContent = (data.ml_confidence_score * 100).toFixed(0) + "%";
+
+            // Genuinely fit calibration method (Platt/Isotonic), not an
+            // assumed-Gaussian shortcut -- see backend/api_simulation.py's
+            // ml_calibration_method field docs.
+            const calibNote = document.getElementById("mlCalibrationNote");
+            if (data.ml_calibration_method) {
+                calibNote.textContent = `calibrated: ${data.ml_calibration_method}`;
+                calibNote.classList.remove("hidden");
+            } else {
+                calibNote.classList.add("hidden");
+            }
+
+            const contextBadge = document.getElementById("mlContextBadge");
+            const baseNote = document.getElementById("mlBaseMarginNote");
+            if (data.ml_context_adjustment_applied) {
+                contextBadge.classList.remove("hidden");
+                baseNote.textContent = "base: " + (data.ml_base_predicted_margin_a_minus_b >= 0 ? "+" : "")
+                    + data.ml_base_predicted_margin_a_minus_b.toFixed(1);
+                baseNote.classList.remove("hidden");
+            } else {
+                contextBadge.classList.add("hidden");
+                baseNote.classList.add("hidden");
+            }
+
+            // Fine print: the narrower ML-only metric, explicitly contrasted
+            // against the headline figure above so the two are never conflated.
+            const note = document.getElementById("mlHoldoutNote");
+            if (data.ml_only_holdout_accuracy != null) {
+                note.textContent = `ML signal alone (no engine credit): `
+                    + `${(data.ml_only_holdout_accuracy * 100).toFixed(1)}% margin-sign accuracy `
+                    + `(n=${data.ml_only_holdout_n_games}) -- narrower than the ${benchAcc.textContent} `
+                    + `full-pipeline figure above, which also credits the Monte Carlo engine.`;
+            } else {
+                note.textContent = "";
+            }
+
+            // Real, out-of-domain generalization check: this same pipeline's
+            // accuracy on actual playoff games it was never trained on --
+            // typically lower than the regular-season figure above, and
+            // worth surfacing plainly rather than only showing the better
+            // regular-season number (see backend/api_simulation.py's
+            // hybrid_pipeline_playoff_accuracy field docs).
+            const playoffNote = document.getElementById("mlPlayoffNote");
+            if (data.hybrid_pipeline_playoff_accuracy != null) {
+                playoffNote.textContent = `On real 2024-25 PLAYOFF games (never trained on, n=`
+                    + `${data.hybrid_pipeline_playoff_n_games}): ${(data.hybrid_pipeline_playoff_accuracy * 100).toFixed(1)}% `
+                    + `accuracy -- vs. ${(data.hybrid_pipeline_playoff_baseline_accuracy * 100).toFixed(1)}% for the engine `
+                    + `alone. Genuine out-of-domain generalization is weaker here than the regular-season figure above.`;
+                playoffNote.classList.remove("hidden");
+            } else {
+                playoffNote.classList.add("hidden");
+            }
+
+            document.getElementById("hybridMlBox").classList.remove("hidden");
+        }
+
+        // Runs the Hybrid ML layer (see backend/api_simulation.py's
+        // /api/simulate-ml): predicts this matchup's expected point margin
+        // from the trained XGBoost model, then biases a real 100k-game GPU
+        // batch toward that data-driven baseline via --ml-margin. Reuses
+        // the same Team A/B and toggles as "Run GPU Simulation" above --
+        // real rosters only, since the trained model's features are keyed
+        // by real NBA abbreviations (no equivalent for a custom roster).
+        async function runHybridMl() {
+            const teamA = document.getElementById("teamA").value.toUpperCase().trim();
+            const teamB = document.getElementById("teamB").value.toUpperCase().trim();
+            const homeTeam = document.getElementById("homeTeam").value;
+            const enableFatigue = document.getElementById("enableFatigue").checked;
+            const enableBigMatch = document.getElementById("enableBigMatch").checked;
+            const enableShrinkage = document.getElementById("enableShrinkage").checked;
+            const useCustomRosters = document.getElementById("enableCustomRosters").checked;
+
+            if (useCustomRosters) {
+                alert("Hybrid ML Prediction requires real rosters -- the trained model's features are keyed by real NBA team abbreviations. Turn off \"Customize Rosters\" to use this mode.");
+                return;
+            }
+            if (teamA === teamB) {
+                alert("Team A and Team B must be different.");
+                return;
+            }
+
+            const runBtn = document.getElementById("runMlBtn");
+            const btnText = document.getElementById("mlBtnText");
+            runBtn.disabled = true;
+            btnText.textContent = "Running Hybrid ML Pipeline...";
+
+            document.getElementById("welcomeState").classList.add("hidden");
+            document.getElementById("resultContainer").classList.add("hidden");
+            document.getElementById("warningBox").classList.add("hidden");
+
+            let payload = {
+                team_a: teamA, team_b: teamB,
+                enable_fatigue: enableFatigue,
+                team_b_rest_days: enableFatigue ? 0 : 2,
+                enable_big_match: enableBigMatch,
+                enable_shrinkage: enableShrinkage,
+            };
+            if (homeTeam !== "none") payload.home_team = homeTeam;
+
+            try {
+                const response = await fetch(ML_API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || "Server error occurred.");
+                }
+                renderGpuResult(data, teamA, teamB);
+            } catch (error) {
+                alert("API Connection Error: " + error.message
+                    + "\n(Ensure Uvicorn backend and CORS are active, and a trained model exists in "
+                    + "ml_model/ -- run `python train_ml_model.py` first if not.)");
+            } finally {
+                runBtn.disabled = false;
+                btnText.textContent = "🧠 Run Hybrid ML Prediction";
+            }
+        }
+
+        // --- Single-Game Play-by-Play Viewer ---------------------------------
+        // Ported line-for-line from backend/eda_dashboard.py's
+        // parse_play_by_play()/render_score_progression_chart() (the
+        // Streamlit version of this same feature, already validated against
+        // real simulator.exe output) -- same regexes, same running-score
+        // reconstruction (including the AND-1 free-throw fix: those lines
+        // print as a separate "   -> AND-1! ... converts the free throw!"
+        // note with no "[+N pts]" marker of their own, and free throws in
+        // general print as "N/M makes." with no marker either -- see
+        // cpp_engine/main.cpp's PossessionEngine::simulate_possession).
+        const PBP_EVENT_RE = /^\s*\[(Q\d+|OT\d+)\s*\|\s*(\d+):(\d+)\]\s*(\S+)\s*(?:\[CLUTCH PLAY\]\s*)?:\s*(.*)$/;
+        const PBP_POINTS_RE = /\[\+(\d+)\s*pts\]/;
+        const PBP_FT_RE = /goes to the line,\s*(\d+)\/(\d+)\s*makes\./;
+        const PBP_REB_RE = /^\s*->\s*(.+)$/;
+        const PBP_OT_RE = /\*\*\*\s*(OVERTIME\s+\d+)/;
+        const PBP_SUB_RE = /^\s*\[Min\s+(\d+)\]\s*(\S+)\s+SUB:\s*(.+)$/;
+
+        let pbpEventsCache = [];
+        let pbpTeamA = "";
+        let pbpTeamB = "";
+
+        function parsePlayByPlay(rawText, teamA, teamB) {
+            const rows = [];
+            let scoreA = 0, scoreB = 0, seq = 0;
+
+            (rawText || "").split("\n").forEach((rawLine) => {
+                const line = rawLine.replace(/\s+$/, "");
+                if (!line.trim()) return;
+
+                const otMatch = PBP_OT_RE.exec(line);
+                if (otMatch) {
+                    seq += 1;
+                    rows.push({ seq, period: otMatch[1], clock: "", team: "", eventType: "period",
+                                description: line.trim(), points: 0, scoreA, scoreB });
+                    return;
+                }
+
+                const subMatch = PBP_SUB_RE.exec(line);
+                if (subMatch) {
+                    seq += 1;
+                    rows.push({ seq, period: "", clock: `Min ${subMatch[1]}`, team: subMatch[2],
+                                eventType: "substitution", description: subMatch[3].trim(),
+                                points: 0, scoreA, scoreB });
+                    return;
+                }
+
+                const eventMatch = PBP_EVENT_RE.exec(line);
+                if (eventMatch) {
+                    const [, period, min, sec, team, textRaw] = eventMatch;
+                    const text = textRaw.trim();
+                    const pointsMatch = PBP_POINTS_RE.exec(text);
+                    const ftMatch = PBP_FT_RE.exec(text);
+                    let points = 0;
+                    if (pointsMatch) points = parseInt(pointsMatch[1], 10);
+                    else if (ftMatch) points = parseInt(ftMatch[1], 10);
+                    if (points) {
+                        if (team === teamA) scoreA += points;
+                        else if (team === teamB) scoreB += points;
+                    }
+                    seq += 1;
+                    rows.push({ seq, period, clock: `${min}:${sec}`, team, eventType: "possession",
+                                description: text, points, scoreA, scoreB });
+                    return;
+                }
+
+                const rebMatch = PBP_REB_RE.exec(line);
+                if (rebMatch && rows.length > 0) {
+                    const note = rebMatch[1].trim();
+                    const prev = rows[rows.length - 1];
+                    if (note.includes("AND-1") && note.includes("converts the free throw")) {
+                        prev.points += 1;
+                        if (prev.team === teamA) scoreA += 1;
+                        else if (prev.team === teamB) scoreB += 1;
+                        prev.scoreA = scoreA;
+                        prev.scoreB = scoreB;
+                    }
+                    prev.description += " " + note;
+                }
+                // Any other line (headers, dividers, "FINAL SCORE", etc.) is
+                // intentionally skipped -- still visible in the raw-text
+                // <details> block rendered alongside this table.
+            });
+
+            return rows;
+        }
+
+        function svgEl(tag, attrs) {
+            const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+            Object.entries(attrs || {}).forEach(([k, v]) => el.setAttribute(k, v));
+            return el;
+        }
+
+        // Builds the chart entirely through the SVG DOM API (numeric
+        // attributes + textContent/createTextNode for labels) rather than
+        // innerHTML string interpolation -- team codes come straight from
+        // the free-text Team A/B inputs above, so this must never trust
+        // them as markup (same discipline as makeRosterInput() above).
+        function renderScoreChart(container, events, teamA, teamB) {
+            container.innerHTML = "";
+            const scoring = events.filter((e) => e.eventType === "possession");
+            if (scoring.length === 0) {
+                const p = document.createElement("p");
+                p.className = "text-xs text-slate-500 text-center py-8";
+                p.textContent = "No scoring events to chart.";
+                container.appendChild(p);
+                return;
+            }
+
+            const width = 800, height = 260, padL = 32, padR = 16, padT = 16, padB = 30;
+            const innerW = width - padL - padR, innerH = height - padT - padB;
+            const maxSeq = scoring[scoring.length - 1].seq;
+            const maxScore = Math.max(1, ...scoring.map((e) => Math.max(e.scoreA, e.scoreB)));
+            const xScale = (seq) => padL + (seq / maxSeq) * innerW;
+            const yScale = (score) => padT + innerH - (score / maxScore) * innerH;
+
+            function stepPoints(key) {
+                const pts = [[xScale(0), yScale(0)]];
+                let prevY = yScale(0);
+                scoring.forEach((e) => {
+                    const x = xScale(e.seq), y = yScale(e[key]);
+                    pts.push([x, prevY]);
+                    pts.push([x, y]);
+                    prevY = y;
+                });
+                return pts.map((p) => p.join(",")).join(" ");
+            }
+
+            const svg = svgEl("svg", { viewBox: `0 0 ${width} ${height}`, class: "w-full h-64" });
+            svg.appendChild(svgEl("line", { x1: padL, y1: padT + innerH, x2: padL + innerW, y2: padT + innerH, stroke: "#334155" }));
+            svg.appendChild(svgEl("line", { x1: padL, y1: padT, x2: padL, y2: padT + innerH, stroke: "#334155" }));
+
+            // Real lead changes: sign(scoreA - scoreB) flips (0 = tied, not
+            // counted as a "side" of its own) -- mirrors the Streamlit
+            // version's momentum-shift markers.
+            let prevSign = 0;
+            scoring.forEach((e) => {
+                const diff = e.scoreA - e.scoreB;
+                const sign = diff > 0 ? 1 : (diff < 0 ? -1 : 0);
+                if (sign !== 0) {
+                    if (prevSign !== 0 && sign !== prevSign) {
+                        const x = xScale(e.seq);
+                        svg.appendChild(svgEl("line", {
+                            x1: x, y1: padT, x2: x, y2: padT + innerH,
+                            stroke: "#64748b", "stroke-dasharray": "3,3", opacity: "0.5",
+                        }));
+                    }
+                    prevSign = sign;
+                }
+            });
+
+            svg.appendChild(svgEl("polyline", { points: stepPoints("scoreA"), fill: "none", stroke: "#f97316", "stroke-width": "2" }));
+            svg.appendChild(svgEl("polyline", { points: stepPoints("scoreB"), fill: "none", stroke: "#38bdf8", "stroke-width": "2" }));
+
+            const maxLabel = svgEl("text", { x: padL, y: padT - 4, fill: "#94a3b8", "font-size": "10" });
+            maxLabel.textContent = String(maxScore);
+            const zeroLabel = svgEl("text", { x: padL, y: padT + innerH + 18, fill: "#94a3b8", "font-size": "10" });
+            zeroLabel.textContent = "0";
+            const xLabel = svgEl("text", { x: padL + innerW - 70, y: padT + innerH + 18, fill: "#94a3b8", "font-size": "10" });
+            xLabel.textContent = "Possession #";
+            svg.appendChild(maxLabel);
+            svg.appendChild(zeroLabel);
+            svg.appendChild(xLabel);
+
+            container.appendChild(svg);
+
+            const legend = document.createElement("div");
+            legend.className = "flex justify-center gap-6 mt-2 text-xs";
+            [[teamA, "#f97316"], [teamB, "#38bdf8"]].forEach(([name, color]) => {
+                const span = document.createElement("span");
+                span.className = "flex items-center gap-1.5";
+                const swatch = document.createElement("span");
+                swatch.className = "w-3 h-1 inline-block";
+                swatch.style.background = color;
+                span.appendChild(swatch);
+                span.appendChild(document.createTextNode(name));
+                legend.appendChild(span);
+            });
+            const note = document.createElement("span");
+            note.className = "text-slate-500";
+            note.textContent = "(dashed = lead change)";
+            legend.appendChild(note);
+            container.appendChild(legend);
+        }
+
+        function renderPbpQuarterBreakdown(events) {
+            const tbody = document.getElementById("pbpQuarterTableBody");
+            tbody.innerHTML = "";
+            const byPeriod = {};
+            const order = [];
+            events.filter((e) => e.eventType === "possession").forEach((e) => {
+                if (!(e.period in byPeriod)) { byPeriod[e.period] = { count: 0, scoreA: 0, scoreB: 0 }; order.push(e.period); }
+                byPeriod[e.period].count += 1;
+                byPeriod[e.period].scoreA = e.scoreA;
+                byPeriod[e.period].scoreB = e.scoreB;
+            });
+            order.forEach((period) => {
+                const row = byPeriod[period];
+                const tr = document.createElement("tr");
+                tr.className = "border-t border-slate-800/60";
+                [period, row.scoreA, row.scoreB, row.count].forEach((val) => {
+                    const td = document.createElement("td");
+                    td.className = "p-2 text-center";
+                    td.textContent = String(val);
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Re-run on every filter-checkbox change (see the onchange handlers
+        // in the HTML above) as well as on a fresh simulation result.
+        function renderPbpEventTable(events) {
+            const tbody = document.getElementById("pbpEventTableBody");
+            tbody.innerHTML = "";
+            const activeTypes = new Set();
+            ["possession", "substitution", "period"].forEach((type) => {
+                const cb = document.getElementById(`pbpFilter_${type}`);
+                if (cb && cb.checked) activeTypes.add(type);
+            });
+
+            events.filter((e) => activeTypes.has(e.eventType)).forEach((e) => {
+                const tr = document.createElement("tr");
+                tr.className = "border-t border-slate-800/60";
+                [e.period, e.clock, e.team, e.eventType, e.description, e.points || "", e.scoreA, e.scoreB]
+                    .forEach((val, idx) => {
+                        const td = document.createElement("td");
+                        td.className = idx === 4 ? "p-2 text-left" : "p-2 text-center whitespace-nowrap";
+                        td.textContent = String(val);
+                        tr.appendChild(td);
+                    });
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderPlayByPlay(cpuData, gpuData, teamA, teamB) {
+            pbpTeamA = teamA;
+            pbpTeamB = teamB;
+
+            document.getElementById("pbpWelcomeState").classList.add("hidden");
+            document.getElementById("pbpResultContainer").classList.remove("hidden");
+
+            document.getElementById("pbpResTeamA").textContent = teamA;
+            document.getElementById("pbpResTeamB").textContent = teamB;
+            document.getElementById("pbpQuarterColA").textContent = teamA;
+            document.getElementById("pbpQuarterColB").textContent = teamB;
+            document.getElementById("pbpResScoreA").textContent = cpuData.final_score_a ?? "--";
+            document.getElementById("pbpResScoreB").textContent = cpuData.final_score_b ?? "--";
+            document.getElementById("pbpResWinner").textContent = cpuData.winner || "Tie";
+
+            const winProbBox = document.getElementById("pbpResWinProbBox");
+            if (gpuData && gpuData.win_probability_a != null) {
+                let label = (gpuData.win_probability_a * 100).toFixed(1) + "%";
+                if (gpuData.shrinkage_applied && gpuData.raw_win_probability_a != null) {
+                    label += ` (raw: ${(gpuData.raw_win_probability_a * 100).toFixed(1)}%)`;
+                }
+                document.getElementById("pbpResWinProb").textContent = label;
+                winProbBox.classList.remove("hidden");
+            } else {
+                winProbBox.classList.add("hidden");
+            }
+
+            const warnBox = document.getElementById("pbpWarningBox");
+            const warnings = [...(cpuData.warnings || []), ...((gpuData && gpuData.warnings) || [])];
+            if (warnings.length > 0) {
+                warnBox.textContent = "Notice: " + warnings.join(" | ");
+                warnBox.classList.remove("hidden");
+            } else {
+                warnBox.classList.add("hidden");
+            }
+
+            pbpEventsCache = parsePlayByPlay(cpuData.play_by_play || "", teamA, teamB);
+            renderScoreChart(document.getElementById("pbpChartContainer"), pbpEventsCache, teamA, teamB);
+            renderPbpQuarterBreakdown(pbpEventsCache);
+            renderPbpEventTable(pbpEventsCache);
+
+            document.getElementById("pbpRawText").textContent = cpuData.play_by_play || "(no play-by-play text returned)";
+        }
+
+        // Runs the CPU engine (for the narrated single game) and a GPU
+        // 100k-game batch (for win-probability context) in parallel, using
+        // the same Team A/B and toggles as the GPU-only "Run GPU
+        // Simulation" button above. The Safety Brake toggle only affects
+        // the GPU-batch context number shown alongside -- it has no effect
+        // on the single narrated game's own play-by-play (same caveat as
+        // the Streamlit version of this feature).
+        async function runPlayByPlay() {
+            const teamA = document.getElementById("teamA").value.toUpperCase().trim();
+            const teamB = document.getElementById("teamB").value.toUpperCase().trim();
+            const homeTeam = document.getElementById("homeTeam").value;
+            const enableFatigue = document.getElementById("enableFatigue").checked;
+            const enableShrinkage = document.getElementById("enableShrinkage").checked;
+
+            const runBtn = document.getElementById("runPbpBtn");
+            const btnText = document.getElementById("pbpBtnText");
+            runBtn.disabled = true;
+            btnText.textContent = "Simulating single game + GPU context...";
+
+            document.getElementById("pbpSection").scrollIntoView({ behavior: "smooth", block: "start" });
+            document.getElementById("pbpResultContainer").classList.add("hidden");
+            document.getElementById("pbpWarningBox").classList.add("hidden");
+
+            if (teamA === teamB) {
+                alert("Team A and Team B must be different.");
+                runBtn.disabled = false;
+                btnText.textContent = "📋 Run Single-Game Play-by-Play";
+                return;
+            }
+
+            try {
+                const basePayload = { team_a: teamA, team_b: teamB, enable_fatigue: enableFatigue,
+                                       team_b_rest_days: enableFatigue ? 0 : 2 };
+                if (homeTeam !== "none") basePayload.home_team = homeTeam;
+
+                const cpuPayload = { ...basePayload, mode: "cpu" };
+                await attachRosterFields(cpuPayload, teamA, teamB);
+
+                const gpuPayload = { ...basePayload, mode: "gpu", enable_shrinkage: enableShrinkage };
+                await attachRosterFields(gpuPayload, teamA, teamB);
+
+                const [cpuResp, gpuResp] = await Promise.all([
+                    fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cpuPayload) }),
+                    fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(gpuPayload) }),
+                ]);
+
+                const cpuData = await cpuResp.json();
+                if (!cpuResp.ok) throw new Error(cpuData.detail || "CPU simulation failed.");
+
+                let gpuData = null;
+                if (gpuResp.ok) {
+                    gpuData = await gpuResp.json();
+                } else {
+                    const gpuErr = await gpuResp.json().catch(() => ({}));
+                    console.warn("GPU context batch failed:", gpuErr.detail || gpuResp.status);
+                }
+
+                if (!cpuData.play_by_play) {
+                    throw new Error("No play-by-play text was returned for this matchup.");
+                }
+
+                renderPlayByPlay(cpuData, gpuData, teamA, teamB);
+            } catch (error) {
+                document.getElementById("pbpWelcomeState").classList.add("hidden");
+                const warnBox = document.getElementById("pbpWarningBox");
+                warnBox.textContent = "Error: " + error.message + " (Ensure Uvicorn backend and CORS are active)";
+                warnBox.classList.remove("hidden");
+            } finally {
+                runBtn.disabled = false;
+                btnText.textContent = "📋 Run Single-Game Play-by-Play";
+            }
+        }
+    </script>
+</body>
+</html>

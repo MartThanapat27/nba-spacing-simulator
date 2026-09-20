@@ -1,0 +1,38 @@
+[
+  {
+    "feature": "usage_concentration",
+    "importance": 0.24528977274894714
+  },
+  {
+    "feature": "rotation_fg3_pct",
+    "importance": 0.14528226852416992
+  },
+  {
+    "feature": "net_rating_proxy",
+    "importance": 0.1300799399614334
+  },
+  {
+    "feature": "rotation_fg3a",
+    "importance": 0.10827662795782089
+  },
+  {
+    "feature": "top_player_usage",
+    "importance": 0.08572617918252945
+  },
+  {
+    "feature": "starter_gravity",
+    "importance": 0.08278369903564453
+  },
+  {
+    "feature": "star_usage_concentration",
+    "importance": 0.08058425039052963
+  },
+  {
+    "feature": "bench_gravity",
+    "importance": 0.06665489822626114
+  },
+  {
+    "feature": "star_out_diff",
+    "importance": 0.055322326719760895
+  }
+]

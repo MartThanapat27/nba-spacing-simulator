@@ -1,0 +1,16 @@
+# Python dependencies for the root-level pipeline scripts:
+#   - backtest_model.py     (stdlib only, no extra deps)
+#   - train_ml_model.py     (ML expected-point-margin predictor; also calls
+#                            nba_api directly for defensive ratings + box scores)
+#   - fetch_real_nba_data.py (real game/schedule data via nba_api)
+#
+# Install into the project's root virtual environment:
+#   .venv\Scripts\activate
+#   pip install -r requirements.txt
+numpy
+pandas
+requests
+scikit-learn
+xgboost
+joblib
+nba_api

@@ -32,3 +32,23 @@ postgres_data/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Python virtual environments (regenerate via requirements.txt)
+.venv/
+.venv-*/
+venv/
+__pycache__/
+*.pyc
+
+# Run logs (this project generates many during training/backtesting runs)
+*.log
+
+# Editor/tooling-local config, not part of the project itself
+.vscode/
+.claude/
+
+# Before/after comparison snapshots kept locally during calibration work --
+# not canonical; see README.md / ml_model/hybrid_pipeline_benchmark.json's
+# own prior_configurations for the historical numbers these represented.
+*.prev
+*.prev_*

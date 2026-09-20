@@ -1,0 +1,204 @@
+{
+  "cv_report": {
+    "loocv_mae": 5.66006156206131,
+    "loocv_r2": -0.11066812750163346,
+    "directional_accuracy": 0.75,
+    "params": {
+      "n_estimators": 100,
+      "max_depth": 3,
+      "learning_rate": 0.05,
+      "reg_alpha": 0.5,
+      "reg_lambda": 1.0,
+      "subsample": 0.8,
+      "colsample_bytree": 0.8,
+      "min_child_weight": 3,
+      "objective": "reg:squarederror",
+      "importance_type": "gain",
+      "random_state": 42,
+      "n_jobs": 1,
+      "verbosity": 0
+    }
+  },
+  "games": [
+    {
+      "team_a": "MIN",
+      "team_b": "OKC",
+      "actual_winner": "OKC",
+      "actual_score_a": 101.0,
+      "actual_score_b": 104.0,
+      "actual_margin": -3.0,
+      "loocv_predicted_margin": 4.929289817810059
+    },
+    {
+      "team_a": "NYK",
+      "team_b": "SAS",
+      "actual_winner": "NYK",
+      "actual_score_a": 112.0,
+      "actual_score_b": 99.0,
+      "actual_margin": 13.0,
+      "loocv_predicted_margin": 5.837143898010254
+    },
+    {
+      "team_a": "BOS",
+      "team_b": "MIA",
+      "actual_winner": "BOS",
+      "actual_score_a": 118.0,
+      "actual_score_b": 107.0,
+      "actual_margin": 11.0,
+      "loocv_predicted_margin": 4.357960224151611
+    },
+    {
+      "team_a": "LAL",
+      "team_b": "DEN",
+      "actual_winner": "DEN",
+      "actual_score_a": 109.0,
+      "actual_score_b": 115.0,
+      "actual_margin": -6.0,
+      "loocv_predicted_margin": 8.768942832946777
+    },
+    {
+      "team_a": "GSW",
+      "team_b": "PHX",
+      "actual_winner": "GSW",
+      "actual_score_a": 121.0,
+      "actual_score_b": 116.0,
+      "actual_margin": 5.0,
+      "loocv_predicted_margin": 7.709192752838135
+    },
+    {
+      "team_a": "MIL",
+      "team_b": "CHI",
+      "actual_winner": "MIL",
+      "actual_score_a": 110.0,
+      "actual_score_b": 102.0,
+      "actual_margin": 8.0,
+      "loocv_predicted_margin": 2.327594518661499
+    },
+    {
+      "team_a": "PHI",
+      "team_b": "TOR",
+      "actual_winner": "PHI",
+      "actual_score_a": 105.0,
+      "actual_score_b": 98.0,
+      "actual_margin": 7.0,
+      "loocv_predicted_margin": -0.584169864654541
+    },
+    {
+      "team_a": "DAL",
+      "team_b": "HOU",
+      "actual_winner": "DAL",
+      "actual_score_a": 114.0,
+      "actual_score_b": 108.0,
+      "actual_margin": 6.0,
+      "loocv_predicted_margin": 2.3705852031707764
+    },
+    {
+      "team_a": "CLE",
+      "team_b": "IND",
+      "actual_winner": "CLE",
+      "actual_score_a": 120.0,
+      "actual_score_b": 113.0,
+      "actual_margin": 7.0,
+      "loocv_predicted_margin": 9.4263916015625
+    },
+    {
+      "team_a": "MEM",
+      "team_b": "NOP",
+      "actual_winner": "NOP",
+      "actual_score_a": 101.0,
+      "actual_score_b": 105.0,
+      "actual_margin": -4.0,
+      "loocv_predicted_margin": 3.937425374984741
+    },
+    {
+      "team_a": "ATL",
+      "team_b": "CHA",
+      "actual_winner": "ATL",
+      "actual_score_a": 116.0,
+      "actual_score_b": 103.0,
+      "actual_margin": 13.0,
+      "loocv_predicted_margin": 2.8902742862701416
+    },
+    {
+      "team_a": "BKN",
+      "team_b": "DET",
+      "actual_winner": "BKN",
+      "actual_score_a": 108.0,
+      "actual_score_b": 99.0,
+      "actual_margin": 9.0,
+      "loocv_predicted_margin": 1.344428300857544
+    },
+    {
+      "team_a": "ORL",
+      "team_b": "WAS",
+      "actual_winner": "ORL",
+      "actual_score_a": 104.0,
+      "actual_score_b": 92.0,
+      "actual_margin": 12.0,
+      "loocv_predicted_margin": 5.431432247161865
+    },
+    {
+      "team_a": "SAC",
+      "team_b": "POR",
+      "actual_winner": "SAC",
+      "actual_score_a": 119.0,
+      "actual_score_b": 110.0,
+      "actual_margin": 9.0,
+      "loocv_predicted_margin": 6.510757923126221
+    },
+    {
+      "team_a": "UTA",
+      "team_b": "LAC",
+      "actual_winner": "LAC",
+      "actual_score_a": 102.0,
+      "actual_score_b": 109.0,
+      "actual_margin": -7.0,
+      "loocv_predicted_margin": -3.427661895751953
+    },
+    {
+      "team_a": "NYK",
+      "team_b": "BOS",
+      "actual_winner": "BOS",
+      "actual_score_a": 101.0,
+      "actual_score_b": 108.0,
+      "actual_margin": -7.0,
+      "loocv_predicted_margin": 4.037137031555176
+    },
+    {
+      "team_a": "OKC",
+      "team_b": "DEN",
+      "actual_winner": "OKC",
+      "actual_score_a": 112.0,
+      "actual_score_b": 106.0,
+      "actual_margin": 6.0,
+      "loocv_predicted_margin": 8.055883407592773
+    },
+    {
+      "team_a": "MIA",
+      "team_b": "PHI",
+      "actual_winner": "MIA",
+      "actual_score_a": 99.0,
+      "actual_score_b": 95.0,
+      "actual_margin": 4.0,
+      "loocv_predicted_margin": 4.4534077644348145
+    },
+    {
+      "team_a": "LAL",
+      "team_b": "GSW",
+      "actual_winner": "LAL",
+      "actual_score_a": 124.0,
+      "actual_score_b": 120.0,
+      "actual_margin": 4.0,
+      "loocv_predicted_margin": 4.879297733306885
+    },
+    {
+      "team_a": "MIN",
+      "team_b": "DAL",
+      "actual_winner": "MIN",
+      "actual_score_a": 107.0,
+      "actual_score_b": 101.0,
+      "actual_margin": 6.0,
+      "loocv_predicted_margin": 7.91793155670166
+    }
+  ]
+}
